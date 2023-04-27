@@ -16,7 +16,7 @@ spec:
     spec:                     # Spec for the containers that will be run in the Pods
       containers:
       - name: chat-server
-        image: callicoder/spring-boot-websocket-chat-demo:0.0.1-SNAPSHOT
+        image: 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op:eks-java-31
         imagePullPolicy: IfNotPresent
         ports:
           - name: http
