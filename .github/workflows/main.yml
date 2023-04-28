@@ -37,7 +37,7 @@ jobs:
           docker build -t my-eks-repo-op .
           docker tag my-eks-repo-op:latest 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op:latest
           docker push 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op:latest
-      - uses: actions-hub/kubectl@1.14.3
+      - uses: tale/kubectl-action@v1
         env:
           KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
         with:
