@@ -37,11 +37,13 @@ jobs:
           docker build -t my-eks-repo-op .
           docker tag my-eks-repo-op:latest 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op:latest
           docker push 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op:latest
-      - uses: tale/kubectl-action@v1
-        env:
-          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+      - name: Configure kubectl
+        uses: tale/kubectl-action@v1
         with:
-            args: aws eks update-kubeconfig --name sandboxeks1 --region ap-southeast-1
-                  kubectl get pods
+           base64-kube-config: ${{ secrets.KUBE_CONFIG_DATA }}
+
+# Now you can use the kubectl command to interact with your Kubernetes cluster
+      - name: Get Kubernetes pods
+        run: kubectl get pods
 
      
