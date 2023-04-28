@@ -39,6 +39,5 @@ jobs:
           docker push 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op:latest
       - name: Run kubectl command
         run: |
-          aws eks update-kubeconfig --name sandboxeks1 --region ap-southeast-1
           kubectl get pods -o wide
      
