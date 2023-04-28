@@ -34,16 +34,9 @@ jobs:
       - name: Authenticate Docker to ECR
         run: |
           aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op
+          docker build -t my-eks-repo-op .
           docker tag my-eks-repo-op:latest 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op:latest
           docker push 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op:latest
-      - name: Build and push Docker image
-        id: build-image
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          push: true
-          tags: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-          registry: ${{ steps.login-ecr.outputs.registry }}
           
       - name: Get Kubernetes credentials
         uses: tale/kubectl-action@v1
