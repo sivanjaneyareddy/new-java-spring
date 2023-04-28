@@ -41,6 +41,8 @@ jobs:
         uses: tale/kubectl-action@v1
         with:
           base64-kube-config: ${{ secrets.KUBE_CONFIG_DATA }}
-      - run: kubectl get pods
+      - run: |
+          aws eks update-kubeconfig --name sandboxeks1 --region ap-southeast-1
+          kubectl get pods
 
      
