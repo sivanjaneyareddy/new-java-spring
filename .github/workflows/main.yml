@@ -40,4 +40,5 @@ jobs:
       - name: Run kubectl command
         run: |
           aws eks update-kubeconfig --name sandboxeks1 --region ap-southeast-1
+          kubectl get pods -o wide
      
