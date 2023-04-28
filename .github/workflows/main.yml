@@ -37,10 +37,10 @@ jobs:
           docker build -t my-eks-repo-op .
           docker tag my-eks-repo-op:latest 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op:latest
           docker push 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op:latest
-          
-      - name: Get Kubernetes credentials
-        uses: tale/kubectl-action@v1.5.2
+      - name: Kube config    
+      - uses: tale/kubectl-action@v1
         with:
-         base64-kube-config: ${{ secrets.KUBE_CONFIG_DATA }}
+         base64-kube-config: ${{ secrets.KUBE_CONFIG }}
+      - run: kubectl get pods
 
      
