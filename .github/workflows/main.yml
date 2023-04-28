@@ -37,10 +37,10 @@ jobs:
           docker build -t my-eks-repo-op .
           docker tag my-eks-repo-op:latest 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op:latest
           docker push 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op:latest
-      - name: Kube config    
-      - uses: tale/kubectl-action@v1
+      - name: KubeCtl Command
+        uses: tale/kubectl-action@v1
         with:
-         base64-kube-config: ${{ secrets.KUBE_CONFIG }}
+          base64-kube-config: ${{ secrets.KUBE_CONFIG_DATA }}
       - run: kubectl get pods
 
      
