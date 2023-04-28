@@ -39,7 +39,7 @@ jobs:
           registry: ${{ steps.login-ecr.outputs.registry }}
           
       - name: Get Kubernetes credentials
-        uses: steebchen/kubectl@v2.0.0
+        uses: tale/kubectl-action@v1
         with:
           kubeconfig-data: ${{ env.KUBE_CONFIG_DATA }}
 
