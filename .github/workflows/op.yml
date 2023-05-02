@@ -17,6 +17,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+      - name: Retrieve version
+        run: |
+              echo "TAG_NAME=$(cat projectFile | grep -Po '(?<=Version>).*(?=</Version>)')" >> $GITHUB_OUTPUT
+              id: version
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+         tag_name: ${{ steps.version.outputs.TAG_NAME }}
       - name: Build with Maven
         run: mvn clean install
 
