@@ -20,7 +20,12 @@ jobs:
       - name: Build with Maven
         run: mvn clean install
       - name: adding aws Cred new
-        run: aws sts assume-role --role-arn arn:aws:iam::490167669940:role/codebuild-siva-service-role --role-session-name codebuild-kubectl --duration-seconds 900
+        run: |
+          aws sts assume-role --role-arn arn:aws:iam::490167669940:role/codebuild-siva-service-role --role-session-name codebuild-kubectl --duration-seconds 900
+          aws sts get-caller-identity
+      - name: adding aws Cred new
+        with:
+          aws-kubectl-role-arn: ${{ EKS_KUBECTL_ROLE_ARN }}
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
