@@ -1,0 +1,66 @@
+pipeline {
+    agent any
+  
+    environment {
+      APP_NAME = 'my-java-app'
+      ECR_REPO = 'my-ecr-repo-op'
+      ECR_REGION = 'ap-southeast-1'
+      APP = 'java'
+      ECR_URI = '490167669940.dkr.ecr.${ECR_REGION}.amazonaws.com/${ECR_REPO}:${APP}-${BUILD_NUMBER}'
+      IMAGE_TAG='java-${BUILD_NUMBER}'
+      TASK_NAME='maven-java-ecs'
+      TASK_DEF_NAME='maven-java-ecs'
+      SERVICE_NAME='spring-boot-op'
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'op-github', url: 'https://github.com/omkarpatel00/new-java-spring.git']]])
+                sh "ls -lart ./*"
+            }
+        }   
+        stage('Build an image') {
+            steps {
+                sh 'mvn clean install'
+                sh "docker build -t my-ecr-repo-op-${app} ."
+            }
+        }
+        stage('Push to ECR') {
+           steps {
+                    sh "aws ecr get-login-password --region ${ECR_REGION} | docker login --username AWS --password-stdin 490167669940.dkr.ecr.${ECR_REGION}.amazonaws.com"
+                    sh "docker tag my-ecr-repo-op-${app}:latest 490167669940.dkr.ecr.${ECR_REGION}.amazonaws.com/${ECR_REPO}:${APP}-${BUILD_NUMBER}"
+                    sh "docker push 490167669940.dkr.ecr.${ECR_REGION}.amazonaws.com/${ECR_REPO}:${APP}-${BUILD_NUMBER}"
+                }
+           }
+        stage('Task Defination') {
+            
+            steps {
+
+                    sh 'aws ecs describe-task-definition --task-definition ${TASK_NAME} --region ${ECR_REGION} >> ${TASK_NAME}_defination.json'
+                    sh """
+                        sed -i 's|"image":.*|"image":"490167669940.dkr.ecr.${ECR_REGION}.amazonaws.com/${ECR_REPO}:${APP}-${BUILD_NUMBER}",|' ${TASK_NAME}_defination.json
+                    """
+                    sh 'jq ".taskDefinition  | del(.taskDefinitionArn) | del(.revision) | del(.status) | del(.requiresAttributes) | del(.compatibilities) | del(.registeredAt) | del(.registeredBy) " ${TASK_NAME}_defination.json >> ${TASK_NAME}_defination_updated.json'
+                    sh 'cat ${TASK_NAME}_defination.json'
+                    sh 'aws ecs register-task-definition --family ${TASK_DEF_NAME} --cli-input-json file://${TASK_NAME}_defination_updated.json'
+               }
+           }
+        stage('Deploy to ECS') {
+           steps {
+                script {
+                    def output = sh(
+                        script: "aws ecs describe-task-definition --task-definition ${TASK_DEF_NAME} --region ${ECR_REGION} | jq '.taskDefinition.taskDefinitionArn' --raw-output",
+                        returnStdout: true
+                    ).trim()
+
+                    def lastDigit = output.tokenize(':').last()
+                    echo "Last digit of task definition ARN: ${lastDigit}"
+                    sh "aws ecs update-service --cluster my-ecs-cluster --service ${SERVICE_NAME} --desired-count 1 --task-definition ${TASK_DEF_NAME}:${lastDigit}"
+                    //sh 'aws ecs update-service --cluster my-ecs-cluster --service ${SERVICE_NAME} --task-definition ${TASK_DEF_NAME}:${TASK_REVISION}'
+                    
+                }
+                sh 'rm ${TASK_NAME}_defination.json'
+                sh 'rm ${TASK_NAME}_defination_updated.json'
+           }
+    }   }
+}
