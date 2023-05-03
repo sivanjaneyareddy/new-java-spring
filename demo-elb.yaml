@@ -2,35 +2,35 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: op-eks
+  name: game-2048
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  namespace: op-eks
-  name: deployment-eks
+  namespace: game-2048
+  name: deployment-2048
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/name: app-op
-  replicas: 1
+      app.kubernetes.io/name: app-2048
+  replicas: 5
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: app-op
+        app.kubernetes.io/name: app-2048
     spec:
       containers:
-      - image: 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op:latest
+      - image: public.ecr.aws/l6m2t8p7/docker-2048:latest
         imagePullPolicy: Always
-        name: app-op
+        name: app-2048
         ports:
-        - containerPort: 8080
+        - containerPort: 80
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  namespace: op-eks
-  name: service-op
+  namespace: game-2048
+  name: service-2048
 spec:
   ports:
     - port: 80
@@ -38,13 +38,13 @@ spec:
       protocol: TCP
   type: NodePort
   selector:
-    app.kubernetes.io/name: app-op
+    app.kubernetes.io/name: app-2048
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  namespace: op-eks
-  name: ingress-op
+  namespace: game-2048
+  name: ingress-2048
   annotations:
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
@@ -57,6 +57,6 @@ spec:
           pathType: Prefix
           backend:
             service:
-              name: service-op
+              name: service-2048
               port:
                 number: 80
