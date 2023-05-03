@@ -1,0 +1,62 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: op-eks
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: op-eks
+  name: deployment-eks
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: app-op
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: app-op
+    spec:
+      containers:
+      - image: 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op:latest
+        imagePullPolicy: Always
+        name: app-op
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: op-eks
+  name: service-op
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: app-op
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: op-eks
+  name: ingress-op
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: service-op
+              port:
+                number: 80
