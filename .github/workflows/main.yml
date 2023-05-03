@@ -1,4 +1,4 @@
-name: Java Spring CI/CD Pipeline
+name: Deploy to ECS
 
 on:
   push:
@@ -6,50 +6,42 @@ on:
       - master
 
 env:
-  APP_NAME: my-java-app
-  ECR_REPO: my-ecr-repo-op
-  ECR_REGION-op: ap-southeast-1
-  REGION: ap-southeast-1
-  APP: java
-  ECR_URI: '490167669940.dkr.ecr.${{ env.REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.APP }}-${{ github.run_number }}'
+  APP_NAME: 'my-java-app'
+  ECR_REPO: 'my-ecr-repo-op'
+  AWS_REGION: 'ap-southeast-1'
+  APP: 'java'
+  ECR_URI: '490167669940.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.APP }}-${{ github.run_number }}'
   IMAGE_TAG: 'java-${{ github.run_number }}'
   TASK_NAME: 'maven-java-ecs'
   TASK_DEF_NAME: 'maven-java-ecs'
   SERVICE_NAME: 'spring-boot-op'
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Build an image
-        run: |
-          mvn clean install
-          docker build -t my-ecr-repo-op-${{ env.APP }}:${{ github.run_number }} .
-
-      - name: Push to ECR
-        env:
-          AWS_DEFAULT_REGION: ${{ env.ECR_REGION }}
-        run: |
-          aws ecr get-login-password --region ${{ env.REGION }} | docker login --username AWS --password-stdin 490167669940.dkr.ecr.${{ env.REGION }}.amazonaws.com
-          docker tag my-ecr-repo-op-${{ env.APP }}:${{ github.run_number }} 490167669940.dkr.ecr.${{ env.REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.APP }}-${{ github.run_number }}
-          docker push 490167669940.dkr.ecr.${{ env.REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.APP }}-${{ github.run_number }}
-
-      - name: Task Definition
-        env:
-          AWS_DEFAULT_REGION: ${{ env.REGION }}
-        run: |
-          aws ecs describe-task-definition --task-definition ${{ env.TASK_NAME }} --region ${{ env.REGION }} >> ${{ env.TASK_NAME }}_defination.json
-          sed -i 's|"image":.*|"image":"490167669940.dkr.ecr.${{ env.REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.APP }}-${{ github.run_number }}",|' ${{ env.TASK_NAME }}_defination.json
-          jq '.taskDefinition | del(.taskDefinitionArn) | del(.revision) | del(.status) | del(.requiresAttributes) | del(.compatibilities) | del(.registeredAt) | del(.registeredBy) ' ${{ env.TASK_NAME }}_defination.json >> ${{ env.TASK_NAME }}_defination_updated.json
-          aws ecs register-task-definition --family ${{ env.TASK_DEF_NAME }} --cli-input-json file://${{ env.TASK_NAME }}_defination_updated.json
-
-      - name: Deploy to ECS
-        env:
-          AWS_DEFAULT_REGION: ${{ env.REGION }}
-        run: |
-          output=$(aws ecs describe-task-definition --task-definition ${{ env.TASK_DEF_NAME }} --region ${{ env.REGION }} | jq '.taskDefinition.taskDefinitionArn' --raw-output)
-          last_digit=$(echo $output | awk -F':' '{print $NF}')
-         
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        ref: master
+    - name: Build an image
+      run: |
+        mvn clean install
+        docker build -t my-ecr-repo-op-${{ env.APP }} .
+    - name: Push to ECR
+      run: |
+        aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin 490167669940.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+        docker tag my-ecr-repo-op-${{ env.APP }}:latest 490167669940.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.APP }}-${{ github.run_number }}
+        docker push 490167669940.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.APP }}-${{ github.run_number }}
+    - name: Task Definition
+      run: |
+        aws ecs describe-task-definition --task-definition ${{ env.TASK_NAME }} --region ${{ env.AWS_REGION }} >> ${{ env.TASK_NAME }}_defination.json
+        sed -i 's|"image":.*|"image":"490167669940.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.APP }}-${{ github.run_number }}",|' ${{ env.TASK_NAME }}_defination.json
+        jq ".taskDefinition | del(.taskDefinitionArn) | del(.revision) | del(.status) | del(.requiresAttributes) | del(.compatibilities) | del(.registeredAt) | del(.registeredBy)" ${{ env.TASK_NAME }}_defination.json >> ${{ env.TASK_NAME }}_defination_updated.json
+        cat ${{ env.TASK_NAME }}_defination.json
+        aws ecs register-task-definition --family ${{ env.TASK_DEF_NAME }} --cli-input-json file://${{ env.TASK_NAME }}_defination_updated.json
+    - name: Deploy to ECS
+      run: |
+        TASK_DEF_ARN=$(aws ecs describe-task-definition --task-definition ${{ env.TASK_DEF_NAME }} --region ${{ env.AWS_REGION }} | jq '.taskDefinition.taskDefinitionArn' --raw-output | sed 's/.*:\([0-9]\{1,\}\)$/\1/')
+        echo "Last digit of task definition ARN: $TASK_DEF_ARN"
+        aws ecs update-service --cluster my-ecs-cluster --service ${{ env.SERVICE_NAME }} --desired-count 1 --task-definition ${{ env.TASK_DEF_NAME }}:$TASK_DEF_ARN
