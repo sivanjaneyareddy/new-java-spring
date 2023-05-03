@@ -9,7 +9,7 @@ env:
   APP_NAME: my-java-app
   ECR_REPO: my-ecr-repo-op
   ECR_REGION-op: ap-southeast-1
-  ECR_REGION: ap-southeast-1
+  REGION: ap-southeast-1
   APP: java
   ECR_URI: '490167669940.dkr.ecr.${{ env.ECR_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.APP }}-${{ github.run_number }}'
   IMAGE_TAG: 'java-${{ github.run_number }}'
