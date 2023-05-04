@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-
 env:
   APP_NAME: 'my-java-app'
   ECR_REPO: 'my-ecr-repo-op'
