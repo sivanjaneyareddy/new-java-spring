@@ -5,17 +5,17 @@ on:
     branches:
       - master
 
-env:
-  APP_NAME: eks-java
-  ECR_REPO: my-eks-repo-op
-  ECR_REGION: ap-southeast-1
-  APP: eks-java
-  ECR_URI: "490167669940.dkr.ecr.${{ env.ECR_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.APP }}-${{ github.run_number }}"
-  IMAGE_TAG: "java-${{ github.run_number }}"
-
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
+    env:
+      APP_NAME: eks-java
+      ECR_REPO: my-eks-repo-op
+      ECR_REGION: ap-southeast-1
+      APP: eks-java
+      ECR_URI: "490167669940.dkr.ecr.${{ env.ECR_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.APP }}-${{ github.run_number }}"
+      IMAGE_TAG: "java-${{ github.run_number }}"
 
     steps:
       - name: Checkout
