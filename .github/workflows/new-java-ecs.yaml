@@ -3,45 +3,60 @@ name: Deploy to ECS
 on:
   push:
     branches:
-      - master
-
-env:
-  APP_NAME: 'my-java-app'
-  ECR_REPO: 'my-ecr-repo-op'
-  AWS_REGION: 'ap-southeast-1'
-  APP: 'java'
-  ECR_URI: '490167669940.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.APP }}-${{ github.run_number }}'
-  IMAGE_TAG: 'java-${{ github.run_number }}'
-  TASK_NAME: 'maven-java-ecs'
-  TASK_DEF_NAME: 'maven-java-ecs'
-  SERVICE_NAME: 'spring-boot-op'
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-      with:
-        ref: master
-    - name: Build an image
-      run: |
-        mvn clean install
-        docker build -t my-ecr-repo-op-${{ env.APP }} .
-    - name: Push to ECR
-      run: |
-        aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin 490167669940.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
-        docker tag my-ecr-repo-op-${{ env.APP }}:latest 490167669940.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.APP }}-${{ github.run_number }}
-        docker push 490167669940.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.APP }}-${{ github.run_number }}
-    - name: Task Definition
-      run: |
-        aws ecs describe-task-definition --task-definition ${{ env.TASK_NAME }} --region ${{ env.AWS_REGION }} >> ${{ env.TASK_NAME }}_defination.json
-        sed -i 's|"image":.*|"image":"490167669940.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.APP }}-${{ github.run_number }}",|' ${{ env.TASK_NAME }}_defination.json
-        jq ".taskDefinition | del(.taskDefinitionArn) | del(.revision) | del(.status) | del(.requiresAttributes) | del(.compatibilities) | del(.registeredAt) | del(.registeredBy)" ${{ env.TASK_NAME }}_defination.json >> ${{ env.TASK_NAME }}_defination_updated.json
-        cat ${{ env.TASK_NAME }}_defination.json
-        aws ecs register-task-definition --family ${{ env.TASK_DEF_NAME }} --cli-input-json file://${{ env.TASK_NAME }}_defination_updated.json
-    - name: Deploy to ECS
-      run: |
-        TASK_DEF_ARN=$(aws ecs describe-task-definition --task-definition ${{ env.TASK_DEF_NAME }} --region ${{ env.AWS_REGION }} | jq '.taskDefinition.taskDefinitionArn' --raw-output | sed 's/.*:\([0-9]\{1,\}\)$/\1/')
-        echo "Last digit of task definition ARN: $TASK_DEF_ARN"
-        aws ecs update-service --cluster my-ecs-cluster --service ${{ env.SERVICE_NAME }} --desired-count 1 --task-definition ${{ env.TASK_DEF_NAME }}:$TASK_DEF_ARN
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-1
+        env:
+          AWS_REGION: ap-southeast-1
+          AWS_DEFAULT_REGION: ap-southeast-1
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          aws-region: ap-southeast-1
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.ECR_REGISTRY }}/my-ecr-repo-op:latest
+          build-args: |
+            JAR_FILE=target/websocket-demo-0.0.1-SNAPSHOT.jar
+          env:
+            ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+        env:
+          AWS_REGION: ap-southeast-1
+          AWS_DEFAULT_REGION: ap-southeast-1
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+      - name: Render Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: maven-java-ecs
+          container-name: maven-java-cnt
+          image: ${{ secrets.ECR_REGISTRY }}/my-ecr-repo-op:latest
+        env:
+          AWS_REGION: ap-southeast-1
+          ECR_REPOSITORY: my-ecr-repo-op
+          ECS_SERVICE: spring-boot-op
+          ECS_CLUSTER: my-ecs-cluster
+          ECS_TASK_DEFINITION: maven-java-ecs
+          CONTAINER_NAME: maven-java-cnt
+          AWS_DEFAULT_REGION: ap-southeast-1
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
