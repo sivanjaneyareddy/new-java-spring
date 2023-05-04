@@ -1,43 +1,43 @@
-name: Java Spring CI/CD
+name: Deploy Spring Boot Application to AWS EKS
 
 on:
   push:
     branches:
       - master
 
+env:
+  AWS_REGION: ap-southeast-1
+  ECR_REGISTRY: my-eks-repo-op
+  ECR_REPOSITORY: my-eks-repo-op
+  KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
-
-    env:
-      APP_NAME: eks-java
-      ECR_REPO: my-eks-repo-op
-      AWS_REGION: ap-southeast-1
-      APP: eks-java
-      ECR_URI: "490167669940.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.APP }}-${{ github.run_number }}"
-      IMAGE_TAG: "java-${{ github.run_number }}"
-
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v2
+      - name: Build with Maven
+        run: mvn clean install
 
-      - name: Set up Java
-        uses: actions/setup-java@v2
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
         with:
-          java-version: '11'
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Build an image
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+      - name: Authenticate Docker to ECR
         run: |
-          mvn clean install
+          aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op
           docker build -t my-eks-repo-op .
-
-      - name: Push to ECR
+          docker tag my-eks-repo-op:latest 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op:latest
+          docker push 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op:latest
+      - name: Run kubectl command
         run: |
-          aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin 490167669940.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
-          docker tag my-eks-repo-op:latest 490167669940.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:latest
-          docker push 490167669940.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:latest
-
-      - name: Deploy On AWS EKS
-        run: |
-          aws eks update-kubeconfig --name sandboxeks1 --region ${{ env.AWS_REGION }}
+          aws eks update-kubeconfig --name sandboxeks1 --region ap-southeast-1
           kubectl get pods -o wide
