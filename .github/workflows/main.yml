@@ -7,8 +7,8 @@ on:
 
 env:
   AWS_REGION: ap-southeast-1
-  ECR_REGISTRY: my-eks-repo-op
-  ECR_REPOSITORY: my-eks-repo-op
+  ECR_REGISTRY: my-ecr-repo-op
+  ECR_REPOSITORY: my-ecr-repo-op
   KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
 
 jobs:
@@ -35,8 +35,8 @@ jobs:
         run: |
           aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com
           docker build -t my-eks-repo-op .
-          docker tag my-eks-repo-op:latest 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op:latest
-          docker push 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op:latest
+          docker tag my-ecr-repo-op:latest 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-ecr-repo-op:latest
+          docker push 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-ecr-repo-op:latest
       - name: Run kubectl command
         run: |
           aws eks update-kubeconfig --name sandboxeks1 --region ap-southeast-1
