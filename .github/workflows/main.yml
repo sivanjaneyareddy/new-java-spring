@@ -12,9 +12,9 @@ jobs:
     env:
       APP_NAME: eks-java
       ECR_REPO: my-eks-repo-op
-      ECR_REGION: ap-southeast-1
+      AWS_REGION: ap-southeast-1
       APP: eks-java
-      ECR_URI: "490167669940.dkr.ecr.${{ env.ECR_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.APP }}-${{ github.run_number }}"
+      ECR_URI: "490167669940.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.APP }}-${{ github.run_number }}"
       IMAGE_TAG: "java-${{ github.run_number }}"
 
     steps:
@@ -33,11 +33,11 @@ jobs:
 
       - name: Push to ECR
         run: |
-          aws ecr get-login-password --region ${{ env.ECR_REGION }} | docker login --username AWS --password-stdin 490167669940.dkr.ecr.${{ env.ECR_REGION }}.amazonaws.com
-          docker tag my-eks-repo-op:latest 490167669940.dkr.ecr.${{ env.ECR_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:latest
-          docker push 490167669940.dkr.ecr.${{ env.ECR_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:latest
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin 490167669940.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+          docker tag my-eks-repo-op:latest 490167669940.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:latest
+          docker push 490167669940.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:latest
 
       - name: Deploy On AWS EKS
         run: |
-          aws eks update-kubeconfig --name sandboxeks1 --region ${{ env.ECR_REGION }}
+          aws eks update-kubeconfig --name sandboxeks1 --region ${{ env.AWS_REGION }}
           kubectl get pods -o wide
