@@ -1,0 +1,42 @@
+name: Deploy Spring Boot Application to AWS EKS
+
+on:
+  push:
+    branches:
+      - master
+
+env:
+  AWS_REGION: ap-southeast-1
+  ECR_REGISTRY: my-eks-repo-op
+  ECR_REPOSITORY: my-eks-repo-op
+  KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build with Maven
+        run: mvn clean install
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+      - name: Authenticate Docker to ECR
+        run: |
+          aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op
+          docker build -t my-eks-repo-op .
+          docker tag my-eks-repo-op:latest 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op:latest
+          docker push 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op:latest
+      - name: Run kubectl command
+        run: |
+          aws eks update-kubeconfig --name sandboxeks1 --region ap-southeast-1
