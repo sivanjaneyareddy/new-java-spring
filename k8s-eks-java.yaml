@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: springboot-app-op
-        image: 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-eks-repo-op:eks-java-31
+        image: 490167669940.dkr.ecr.ap-southeast-1.amazonaws.com/my-ecr-repo-op:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8085
