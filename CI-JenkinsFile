@@ -5,7 +5,7 @@ pipeline {
       APP_NAME = 'my-java-app'
       ECR_REPO = 'my-ecr-repo'
       ECR_REGION = 'ap-southeast-1'
-      APP = 'java'
+      APP = 'java-ECS'
       
       IMAGE_TAG='java-${BUILD_NUMBER}'
     }
