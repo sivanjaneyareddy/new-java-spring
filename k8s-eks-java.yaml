@@ -5,7 +5,7 @@ metadata:
     app: springboot-app-op
   name: springboot-app-op
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: springboot-app-op
